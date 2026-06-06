@@ -146,6 +146,7 @@ Example with notification opt-out:
 - `thread/goal/set` — create or update the single persisted goal for a materialized thread; returns the current goal and emits `thread/goal/updated`.
 - `thread/goal/get` — fetch the current persisted goal for a materialized thread; returns `goal: null` when no goal exists.
 - `thread/goal/clear` — clear the current persisted goal for a materialized thread; returns whether a goal was removed and emits `thread/goal/cleared` when state changes.
+- `thread/contextPins/list`, `thread/contextPins/create`, `thread/contextPins/update`, `thread/contextPins/delete` — manage bounded, persisted text snippets for a materialized thread. Active pins are re-sent to the model as untrusted user-provided context on future turns, including after compaction.
 - `thread/goal/updated` — notification emitted whenever a thread goal changes; includes the full current goal.
 - `thread/goal/cleared` — notification emitted whenever a thread goal is removed.
 - `thread/settings/updated` — experimental notification emitted to subscribed clients when a loaded thread’s effective next-turn settings change; includes `threadId` and the full `threadSettings`.
@@ -520,6 +521,46 @@ Experimental: use `memory/reset` to clear local memory artifacts and sqlite-back
 ```json
 { "method": "memory/reset", "id": 27 }
 { "id": 27, "result": {} }
+```
+
+### Example: Manage thread context pins
+
+Use `thread/contextPins/*` to persist short text snippets that should be supplied to future turns for a materialized thread. Pins are bounded to 16 entries per thread, 16 KiB per pin, and 64 KiB total text. They are injected as untrusted user-provided context; they do not grant approval, do not override system or developer instructions, and are not available on ephemeral threads.
+
+```json
+{ "method": "thread/contextPins/create", "id": 31, "params": {
+    "threadId": "thr_123",
+    "text": "When discussing rollout, preserve the existing staged deploy plan."
+} }
+{ "id": 31, "result": { "pin": {
+    "threadId": "thr_123",
+    "pinId": "8b9a0a25-0db9-4cce-a2a3-93e3161c0a3e",
+    "text": "When discussing rollout, preserve the existing staged deploy plan.",
+    "createdAt": 1776272400,
+    "updatedAt": 1776272400
+} } }
+
+{ "method": "thread/contextPins/list", "id": 32, "params": {
+    "threadId": "thr_123",
+    "limit": 16
+} }
+{ "id": 32, "result": {
+    "data": [ ... ],
+    "nextCursor": null
+} }
+
+{ "method": "thread/contextPins/update", "id": 33, "params": {
+    "threadId": "thr_123",
+    "pinId": "8b9a0a25-0db9-4cce-a2a3-93e3161c0a3e",
+    "text": "When discussing rollout, keep the staged deploy plan unless the user changes it."
+} }
+{ "id": 33, "result": { "pin": { ... } } }
+
+{ "method": "thread/contextPins/delete", "id": 34, "params": {
+    "threadId": "thr_123",
+    "pinId": "8b9a0a25-0db9-4cce-a2a3-93e3161c0a3e"
+} }
+{ "id": 34, "result": { "deleted": true } }
 ```
 
 ### Example: Set and update a thread goal

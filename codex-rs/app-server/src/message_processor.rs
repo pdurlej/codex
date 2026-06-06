@@ -33,6 +33,7 @@ use crate::request_processors::PluginRequestProcessor;
 use crate::request_processors::ProcessExecRequestProcessor;
 use crate::request_processors::RemoteControlRequestProcessor;
 use crate::request_processors::SearchRequestProcessor;
+use crate::request_processors::ThreadContextPinsRequestProcessor;
 use crate::request_processors::ThreadGoalRequestProcessor;
 use crate::request_processors::ThreadRequestProcessor;
 use crate::request_processors::TurnRequestProcessor;
@@ -180,6 +181,7 @@ pub(crate) struct MessageProcessor {
     plugin_processor: PluginRequestProcessor,
     remote_control_processor: RemoteControlRequestProcessor,
     search_processor: SearchRequestProcessor,
+    thread_context_pins_processor: ThreadContextPinsRequestProcessor,
     thread_goal_processor: ThreadGoalRequestProcessor,
     thread_processor: ThreadRequestProcessor,
     turn_processor: TurnRequestProcessor,
@@ -415,6 +417,11 @@ impl MessageProcessor {
         );
         let remote_control_processor = RemoteControlRequestProcessor::new(remote_control_handle);
         let search_processor = SearchRequestProcessor::new(outgoing.clone());
+        let thread_context_pins_processor = ThreadContextPinsRequestProcessor::new(
+            Arc::clone(&thread_manager),
+            Arc::clone(&config),
+            state_db.clone(),
+        );
         let thread_goal_processor = ThreadGoalRequestProcessor::new(
             Arc::clone(&thread_manager),
             outgoing.clone(),
@@ -436,7 +443,7 @@ impl MessageProcessor {
             thread_watch_manager.clone(),
             Arc::clone(&thread_list_state_permit),
             thread_goal_processor.clone(),
-            state_db,
+            state_db.clone(),
             Arc::clone(&skills_watcher),
         );
         let turn_processor = TurnRequestProcessor::new(
@@ -452,6 +459,7 @@ impl MessageProcessor {
             thread_watch_manager,
             thread_list_state_permit,
             Arc::clone(&skills_watcher),
+            state_db,
         );
         if matches!(plugin_startup_tasks, crate::PluginStartupTasks::Start) {
             // Keep plugin startup warmups aligned at app-server startup.
@@ -511,6 +519,7 @@ impl MessageProcessor {
             plugin_processor,
             remote_control_processor,
             search_processor,
+            thread_context_pins_processor,
             thread_goal_processor,
             thread_processor,
             turn_processor,
@@ -1067,6 +1076,26 @@ impl MessageProcessor {
             ClientRequest::ThreadGoalClear { params, .. } => {
                 self.thread_goal_processor
                     .thread_goal_clear(request_id.clone(), params)
+                    .await
+            }
+            ClientRequest::ThreadContextPinsList { params, .. } => {
+                self.thread_context_pins_processor
+                    .thread_context_pins_list(params)
+                    .await
+            }
+            ClientRequest::ThreadContextPinsCreate { params, .. } => {
+                self.thread_context_pins_processor
+                    .thread_context_pins_create(params)
+                    .await
+            }
+            ClientRequest::ThreadContextPinsUpdate { params, .. } => {
+                self.thread_context_pins_processor
+                    .thread_context_pins_update(params)
+                    .await
+            }
+            ClientRequest::ThreadContextPinsDelete { params, .. } => {
+                self.thread_context_pins_processor
+                    .thread_context_pins_delete(params)
                     .await
             }
             ClientRequest::ThreadMetadataUpdate { params, .. } => {

@@ -65,6 +65,7 @@ mod memories;
 mod remote_control;
 #[cfg(test)]
 mod test_support;
+mod thread_context_pins;
 mod threads;
 
 pub use goals::GoalAccountingMode;
@@ -73,6 +74,7 @@ pub use goals::GoalStore;
 pub use goals::GoalUpdate;
 pub use memories::MemoryStore;
 pub use remote_control::RemoteControlEnrollmentRecord;
+pub use thread_context_pins::ThreadContextPinStore;
 pub use threads::ThreadFilterOptions;
 
 // "Partition" is the retained-log-content bucket we cap at 10 MiB:
@@ -146,6 +148,7 @@ pub struct StateRuntime {
     pool: Arc<sqlx::SqlitePool>,
     logs_pool: Arc<sqlx::SqlitePool>,
     thread_goals: GoalStore,
+    thread_context_pins: ThreadContextPinStore,
     memories: MemoryStore,
     thread_updated_at_millis: Arc<AtomicI64>,
 }
@@ -254,6 +257,7 @@ impl StateRuntime {
         let thread_updated_at_millis = thread_updated_at_millis.unwrap_or(0);
         let runtime = Arc::new(Self {
             thread_goals: GoalStore::new(Arc::clone(&goals_pool)),
+            thread_context_pins: ThreadContextPinStore::new(Arc::clone(&pool)),
             memories: MemoryStore::new(Arc::clone(&memories_pool), Arc::clone(&pool)),
             pool,
             logs_pool,
@@ -277,6 +281,10 @@ impl StateRuntime {
 
     pub fn thread_goals(&self) -> &GoalStore {
         &self.thread_goals
+    }
+
+    pub fn thread_context_pins(&self) -> &ThreadContextPinStore {
+        &self.thread_context_pins
     }
 
     pub fn memories(&self) -> &MemoryStore {

@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "pinId": {
+      "type": "string"
+    },
+    "text": {
+      "type": "string"
+    },
+    "threadId": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "pinId",
+    "text",
+    "threadId"
+  ],
+  "title": "ThreadContextPinsUpdateParams",
+  "type": "object"
+}

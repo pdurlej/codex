@@ -101,6 +101,9 @@ impl SessionState {
         items: Vec<ResponseItem>,
         reference_context_item: Option<TurnContextItem>,
     ) {
+        if reference_context_item.is_none() {
+            self.additional_context.clear();
+        }
         self.history.replace(items);
         self.history
             .set_reference_context_item(reference_context_item);
