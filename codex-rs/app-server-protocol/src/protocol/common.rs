@@ -551,6 +551,30 @@ client_request_definitions! {
         serialization: thread_id(params.thread_id),
         response: v2::ThreadGoalClearResponse,
     },
+    #[experimental("thread/contextPin/list")]
+    ThreadContextPinList => "thread/contextPin/list" {
+        params: v2::ThreadContextPinListParams,
+        serialization: thread_id(params.thread_id),
+        response: v2::ThreadContextPinListResponse,
+    },
+    #[experimental("thread/contextPin/create")]
+    ThreadContextPinCreate => "thread/contextPin/create" {
+        params: v2::ThreadContextPinCreateParams,
+        serialization: thread_id(params.thread_id),
+        response: v2::ThreadContextPinCreateResponse,
+    },
+    #[experimental("thread/contextPin/update")]
+    ThreadContextPinUpdate => "thread/contextPin/update" {
+        params: v2::ThreadContextPinUpdateParams,
+        serialization: thread_id(params.thread_id),
+        response: v2::ThreadContextPinUpdateResponse,
+    },
+    #[experimental("thread/contextPin/delete")]
+    ThreadContextPinDelete => "thread/contextPin/delete" {
+        params: v2::ThreadContextPinDeleteParams,
+        serialization: thread_id(params.thread_id),
+        response: v2::ThreadContextPinDeleteResponse,
+    },
     ThreadMetadataUpdate => "thread/metadata/update" {
         params: v2::ThreadMetadataUpdateParams,
         serialization: thread_id(params.thread_id),
@@ -2021,6 +2045,64 @@ mod tests {
             thread_goal_set.serialization_scope(),
             Some(ClientRequestSerializationScope::Thread {
                 thread_id: "goal-thread".to_string()
+            })
+        );
+
+        let context_pins_list = ClientRequest::ThreadContextPinList {
+            request_id: request_id(),
+            params: v2::ThreadContextPinListParams {
+                thread_id: "pins-thread".to_string(),
+                cursor: None,
+                limit: None,
+            },
+        };
+        assert_eq!(
+            context_pins_list.serialization_scope(),
+            Some(ClientRequestSerializationScope::Thread {
+                thread_id: "pins-thread".to_string()
+            })
+        );
+
+        let context_pins_create = ClientRequest::ThreadContextPinCreate {
+            request_id: request_id(),
+            params: v2::ThreadContextPinCreateParams {
+                thread_id: "pins-thread".to_string(),
+                text: "remember this".to_string(),
+            },
+        };
+        assert_eq!(
+            context_pins_create.serialization_scope(),
+            Some(ClientRequestSerializationScope::Thread {
+                thread_id: "pins-thread".to_string()
+            })
+        );
+
+        let context_pins_update = ClientRequest::ThreadContextPinUpdate {
+            request_id: request_id(),
+            params: v2::ThreadContextPinUpdateParams {
+                thread_id: "pins-thread".to_string(),
+                pin_id: "pin-1".to_string(),
+                text: "remember this instead".to_string(),
+            },
+        };
+        assert_eq!(
+            context_pins_update.serialization_scope(),
+            Some(ClientRequestSerializationScope::Thread {
+                thread_id: "pins-thread".to_string()
+            })
+        );
+
+        let context_pins_delete = ClientRequest::ThreadContextPinDelete {
+            request_id: request_id(),
+            params: v2::ThreadContextPinDeleteParams {
+                thread_id: "pins-thread".to_string(),
+                pin_id: "pin-1".to_string(),
+            },
+        };
+        assert_eq!(
+            context_pins_delete.serialization_scope(),
+            Some(ClientRequestSerializationScope::Thread {
+                thread_id: "pins-thread".to_string()
             })
         );
 
