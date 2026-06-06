@@ -1,3 +1,4 @@
+use super::thread_context_pins_processor::pinned_context_additional_context;
 use super::*;
 use codex_protocol::models::ContentItem;
 use codex_protocol::models::FunctionCallOutputContentItem;
@@ -80,6 +81,7 @@ pub(crate) struct TurnRequestProcessor {
     thread_watch_manager: ThreadWatchManager,
     thread_list_state_permit: Arc<Semaphore>,
     skills_watcher: Arc<SkillsWatcher>,
+    state_db: Option<StateDbHandle>,
 }
 
 fn map_additional_context(
@@ -136,6 +138,7 @@ impl TurnRequestProcessor {
         thread_watch_manager: ThreadWatchManager,
         thread_list_state_permit: Arc<Semaphore>,
         skills_watcher: Arc<SkillsWatcher>,
+        state_db: Option<StateDbHandle>,
     ) -> Self {
         Self {
             auth_manager,
@@ -150,6 +153,7 @@ impl TurnRequestProcessor {
             thread_watch_manager,
             thread_list_state_permit,
             skills_watcher,
+            state_db,
         }
     }
 
@@ -334,6 +338,20 @@ impl TurnRequestProcessor {
         Ok(())
     }
 
+    async fn turn_additional_context(
+        &self,
+        thread_id: ThreadId,
+        thread: &CodexThread,
+        additional_context: Option<HashMap<String, AdditionalContextEntry>>,
+    ) -> Result<BTreeMap<String, CoreAdditionalContextEntry>, JSONRPCErrorError> {
+        let mut mapped = map_additional_context(additional_context);
+        let state_db = thread.state_db().or_else(|| self.state_db.clone());
+        let pinned_context =
+            pinned_context_additional_context(state_db.as_ref(), thread_id).await?;
+        mapped.extend(pinned_context);
+        Ok(mapped)
+    }
+
     fn normalize_collaboration_mode(
         &self,
         mut collaboration_mode: CollaborationMode,
@@ -492,7 +510,9 @@ impl TurnRequestProcessor {
             .map(V2UserInput::into_core)
             .collect();
         let client_user_message_id = params.client_user_message_id;
-        let additional_context = map_additional_context(params.additional_context);
+        let additional_context = self
+            .turn_additional_context(thread_id, thread.as_ref(), params.additional_context)
+            .await?;
         let turn_has_input = !mapped_items.is_empty();
         let cwd = resolve_request_cwd(params.cwd)?;
         let environments = self
@@ -862,12 +882,12 @@ impl TurnRequestProcessor {
         request_id: &ConnectionRequestId,
         params: TurnSteerParams,
     ) -> Result<TurnSteerResponse, JSONRPCErrorError> {
-        let (_, thread) = self
-            .load_thread(&params.thread_id)
-            .await
-            .inspect_err(|error| {
-                self.track_error_response(request_id, error, /*error_type*/ None);
-            })?;
+        let (thread_id, thread) =
+            self.load_thread(&params.thread_id)
+                .await
+                .inspect_err(|error| {
+                    self.track_error_response(request_id, error, /*error_type*/ None);
+                })?;
         self.ensure_direct_input_allowed(request_id, thread.as_ref())
             .await?;
 
@@ -891,7 +911,9 @@ impl TurnRequestProcessor {
             .into_iter()
             .map(V2UserInput::into_core)
             .collect();
-        let additional_context = map_additional_context(params.additional_context);
+        let additional_context = self
+            .turn_additional_context(thread_id, thread.as_ref(), params.additional_context)
+            .await?;
 
         let turn_id = thread
             .steer_input(

@@ -15314,6 +15314,35 @@
       "title": "ThreadCompactStartResponse",
       "type": "object"
     },
+    "ThreadContextPin": {
+      "properties": {
+        "createdAt": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "pinId": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "threadId": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "createdAt",
+        "pinId",
+        "text",
+        "threadId",
+        "updatedAt"
+      ],
+      "type": "object"
+    },
     "ThreadDeleteParams": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "properties": {
