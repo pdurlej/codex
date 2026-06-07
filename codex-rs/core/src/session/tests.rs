@@ -120,6 +120,8 @@ use codex_protocol::models::BaseInstructions;
 use codex_protocol::models::ContentItem;
 use codex_protocol::models::InternalChatMessageMetadataPassthrough;
 use codex_protocol::models::ResponseItem;
+use codex_protocol::protocol::AdditionalContextEntry;
+use codex_protocol::protocol::AdditionalContextKind;
 use codex_protocol::protocol::AskForApproval;
 use codex_protocol::protocol::CodexErrorInfo;
 use codex_protocol::protocol::CompactedItem;
@@ -8979,6 +8981,29 @@ async fn record_context_updates_and_set_reference_context_item_reinjects_full_co
     let initial_context = build_initial_context(&session, &turn_context).await;
     expected_history.extend(initial_context);
     assert_eq!(history.raw_items().to_vec(), expected_history);
+}
+
+#[tokio::test]
+async fn replace_history_with_reference_context_item_reinjects_additional_context_after_compaction()
+{
+    let (session, turn_context) = make_session_and_context().await;
+    let context_values = || {
+        std::collections::BTreeMap::from([(
+            "codex_context_pin_pin-1".to_string(),
+            AdditionalContextEntry {
+                value: "Remember this".to_string(),
+                kind: AdditionalContextKind::Untrusted,
+            },
+        )])
+    };
+
+    let mut state = session.state.lock().await;
+    assert_eq!(state.additional_context.merge(context_values()).len(), 1);
+    assert_eq!(state.additional_context.merge(context_values()).len(), 0);
+
+    state.replace_history(Vec::new(), Some(turn_context.to_turn_context_item()));
+
+    assert_eq!(state.additional_context.merge(context_values()).len(), 1);
 }
 
 #[tokio::test]
