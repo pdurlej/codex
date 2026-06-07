@@ -180,11 +180,18 @@ impl ThreadContextPinsRequestProcessor {
     ) -> Result<(), JSONRPCErrorError> {
         let running_thread = self.thread_manager.get_thread(thread_id).await.ok();
         let rollout_path = match running_thread.as_ref() {
-            Some(thread) => thread.rollout_path().ok_or_else(|| {
-                invalid_request(format!(
-                    "ephemeral thread does not support context pins: {thread_id}"
-                ))
-            })?,
+            Some(thread) => {
+                let rollout_path = thread.rollout_path().ok_or_else(|| {
+                    invalid_request(format!(
+                        "ephemeral thread does not support context pins: {thread_id}"
+                    ))
+                })?;
+                thread.ensure_rollout_materialized().await;
+                thread.flush_rollout().await.map_err(|err| {
+                    internal_error(format!("failed to flush thread {thread_id}: {err}"))
+                })?;
+                rollout_path
+            }
             None => self.find_context_pin_rollout_path(thread_id).await?,
         };
         reconcile_rollout(
