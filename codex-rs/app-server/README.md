@@ -593,7 +593,7 @@ Experimental: use `memory/reset` to clear local memory artifacts and sqlite-back
 
 ### Example: Manage thread context pins
 
-Use the experimental `thread/contextPin/*` methods to persist short text snippets that should be supplied to future turns for a materialized thread. Clients must opt into `experimentalApi` during initialization. Pins are bounded to 16 entries per thread, 16 KiB per pin, and 64 KiB total text. They are injected as untrusted user-provided context; they do not grant approval, do not override system or developer instructions, and are not available on ephemeral threads.
+Use the experimental `thread/contextPin/*` methods to persist short text snippets that should be supplied to future turns for a materialized thread. Clients must opt into `experimentalApi` during initialization. Pins are bounded to 16 entries per thread, 16 KiB per pin, and 64 KiB total text. They are injected as untrusted user-provided context; they do not grant approval, do not override system or developer instructions, and are not available on ephemeral threads. When injected, each pin is truncated to roughly 1000 tokens, matching the bound applied to all user-provided context.
 
 Updating a pin emits its new text on the next turn. Deleting a pin stops future reinjection but does not rewrite context already present in the current history; that earlier item ages out through normal compaction.
 

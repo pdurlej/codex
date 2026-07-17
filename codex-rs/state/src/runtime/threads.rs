@@ -1057,6 +1057,10 @@ WHERE status IN (?, ?)
                 .bind(thread_id_string)
                 .execute(&mut *tx)
                 .await?;
+            sqlx::query("DELETE FROM thread_context_pins WHERE thread_id = ?")
+                .bind(thread_id_string)
+                .execute(&mut *tx)
+                .await?;
             sqlx::query(
                 r#"
 UPDATE agent_job_items
@@ -1544,6 +1548,10 @@ mod tests {
                 &child_thread_id.to_string(),
             )
             .await?;
+        runtime
+            .thread_context_pins()
+            .create_thread_context_pin(thread_id, "pinned note")
+            .await?;
 
         let rows = runtime
             .delete_threads_strict(&[thread_id, child_thread_id])
@@ -1557,6 +1565,12 @@ mod tests {
                 .fetch_one(runtime.pool.as_ref())
                 .await?;
         assert_eq!(dynamic_tool_count, 0);
+        let context_pin_count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM thread_context_pins WHERE thread_id = ?")
+                .bind(thread_id.to_string())
+                .fetch_one(runtime.pool.as_ref())
+                .await?;
+        assert_eq!(context_pin_count, 0);
         assert_thread_cleanup_state(&runtime, thread_id).await?;
         let job_item = runtime
             .get_agent_job_item("job-1", "item-1")

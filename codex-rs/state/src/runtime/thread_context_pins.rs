@@ -169,6 +169,8 @@ mod tests {
             .expect("pin should exist");
         assert_eq!(updated.pin_id, created.pin_id);
         assert_eq!(updated.text, "Remember this instead");
+        // Update must preserve created_at (it drives list ordering); only text/updated_at change.
+        assert_eq!(updated.created_at, created.created_at);
 
         let deleted = runtime
             .thread_context_pins()

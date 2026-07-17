@@ -186,6 +186,9 @@ impl ThreadContextPinsRequestProcessor {
                         "ephemeral thread does not support context pins: {thread_id}"
                     ))
                 })?;
+                // A pin can be created before the first turn flushes the rollout,
+                // so materialize and flush first to ensure `reconcile_rollout` can
+                // upsert the thread row and satisfy the thread-context-pin FK.
                 thread.ensure_rollout_materialized().await;
                 thread.flush_rollout().await.map_err(|err| {
                     internal_error(format!("failed to flush thread {thread_id}: {err}"))
@@ -377,3 +380,7 @@ fn api_thread_context_pin_from_state(pin: codex_state::ThreadContextPin) -> Thre
         updated_at: pin.updated_at.timestamp(),
     }
 }
+
+#[cfg(test)]
+#[path = "thread_context_pins_processor_tests.rs"]
+mod tests;
